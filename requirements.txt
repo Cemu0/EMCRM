@@ -1,0 +1,13 @@
+boto3==1.39.9
+botocore==1.39.9
+fastapi==0.115.9
+opensearch-py==3.0.0
+pydantic==2.11.2
+pydantic-settings==2.8.1
+pydantic_core==2.33.1
+email-validator==2.1.1
+pytest==8.4.1
+uvicorn==0.34.0
+fastapi-pagination==0.13.3
+httpx==0.28.1
+orjson==3.11.0

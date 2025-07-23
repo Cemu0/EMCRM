@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile
+    container_name: emcrm-api
+    ports:
+      - "8080:8080"
+    environment:
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - AWS_REGION=us-east-1
+      - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
+      - OPENSEARCH_ENDPOINT=http://opensearch-node1:9200
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+      opensearch-node1:
+        condition: service_healthy
+    restart: unless-stopped
+
+  dynamodb-local:
+    image: amazon/dynamodb-local
+    container_name: dynamodb-local
+    ports:
+      - "8000:8000"
+    command: "-jar DynamoDBLocal.jar -inMemory -sharedDb"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null -I -w '%{http_code}' http://localhost:8000 | grep '400'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  opensearch-node1:
+    image: opensearchproject/opensearch:2.14.0
+    container_name: opensearch-node1
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "plugins.security.disabled=true"
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=aStrongPassw0rd!"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9600:9600"  # Performance Analyzer port
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health?pretty || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # opensearch-dashboards:
+  #   image: opensearchproject/opensearch-dashboards:2.14.0
+  #   container_name: opensearch-dashboards
+  #   ports:
+  #     - "5601:5601"
+  #   environment:
+  #     - OPENSEARCH_HOSTS=http://opensearch-node1:9200
+  #     - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+
+volumes:
+  opensearch-data:
