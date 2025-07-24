@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 
@@ -7,6 +8,11 @@ from app.routes import users, events, email, attendance, health, query_users
 from fastapi_pagination import Page, add_pagination, paginate
 from fastapi_pagination.utils import disable_installed_extensions_check
 from app.config import settings
+
+# Conditional imports for authentication
+if settings.auth.enabled:
+    from app.middleware.auth import AuthMiddleware
+    from app.routes import auth
 
 # Configure logging
 logging.basicConfig(
@@ -21,6 +27,10 @@ disable_installed_extensions_check()
 async def lifespan(app: FastAPI):
     # Startup logic
     logger.info("Starting application...")
+    if settings.auth.enabled:
+        logger.info("Authentication enabled")
+    else:
+        logger.info("Authentication disabled - development mode")
     create_tables()
     yield
     # Shutdown logic
@@ -34,7 +44,25 @@ app = FastAPI(
     lifespan=lifespan,
     debug=settings.app.debug
 )
+
+# Add CORS middleware when authentication is enabled
+if settings.auth.enabled:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Configure for your frontend domain
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    # Add authentication middleware
+    app.add_middleware(AuthMiddleware)
+
 add_pagination(app)
+
+# Include authentication routes when enabled
+if settings.auth.enabled:
+    app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 
 # Routers
 app.include_router(users.router, prefix="/users", tags=["Users"])

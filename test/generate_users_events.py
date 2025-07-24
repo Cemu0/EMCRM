@@ -1,13 +1,13 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
-from app.db.init import reset_all_table
+from app.services.db.init import reset_all_table
+from app.services.opensearch.client import get_opensearch_client
 from app.models import GenderEnum
 from uuid import uuid4
 import random
 from time import sleep
 from tqdm import tqdm 
-from app.opensearch.client import get_opensearch_client
 
 client = TestClient(app)
 

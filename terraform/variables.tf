@@ -201,3 +201,46 @@ variable "service_desired_count" {
   type        = number
   default     = 2
 }
+
+# Database Credentials
+variable "aws_access_key_id" {
+  description = "AWS Access Key ID for DynamoDB access"
+  type        = string
+  default     = "dummy"
+  sensitive   = true
+}
+
+variable "aws_secret_access_key" {
+  description = "AWS Secret Access Key for DynamoDB access"
+  type        = string
+  default     = "dummy"
+  sensitive   = true
+}
+
+# Authentication Configuration
+variable "auth_enabled" {
+  description = "Whether to enable authentication"
+  type        = bool
+  default     = true
+}
+
+variable "cognito_user_pool_id" {
+  description = "AWS Cognito User Pool ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "cognito_client_id" {
+  description = "AWS Cognito Client ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "cognito_client_secret" {
+  description = "AWS Cognito Client Secret"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

@@ -111,12 +111,16 @@ resource "aws_ecs_task_definition" "emcrm_task" {
         }
       ]
       environment = [
-        # Database Configuration
+        # Database Configuration (non-sensitive)
         { name = "DB_AWS_REGION", value = var.aws_region },
         { name = "DB_MAIN_TABLE_NAME", value = var.dynamodb_main_table_name },
         { name = "DB_EMAIL_TABLE_NAME", value = var.dynamodb_email_table_name },
+        { name = "DB_MAX_RETRIES", value = "2" },
+        { name = "DB_CONNECT_TIMEOUT", value = "5" },
+        { name = "DB_READ_TIMEOUT", value = "10" },
+        { name = "DB_MAX_POOL_CONNECTIONS", value = "10" },
         
-        # OpenSearch Configuration
+        # OpenSearch Configuration (non-sensitive)
         { name = "OPENSEARCH_MODE", value = "cloud" },
         { name = "OPENSEARCH_HOST", value = var.opensearch_host != "" ? var.opensearch_host : aws_opensearch_domain.emcrm_domain.endpoint },
         { name = "OPENSEARCH_PORT", value = "443" },
@@ -127,12 +131,28 @@ resource "aws_ecs_task_definition" "emcrm_task" {
         { name = "APP_NAME", value = "EMCRM" },
         { name = "APP_DEBUG", value = "false" },
         { name = "APP_LOG_LEVEL", value = "INFO" },
-        { name = "APP_PORT", value = "8080" },
-        { name = "APP_HOST", value = "0.0.0.0" }
+        { name = "APP_API_PORT", value = "8080" },
+        { name = "APP_API_HOST", value = "0.0.0.0" },
+        
+        # Authentication Configuration (non-sensitive)
+        { name = "AUTH_ENABLED", value = var.auth_enabled ? "true" : "false" },
+        { name = "AUTH_COGNITO_REGION", value = var.aws_region },
+        { name = "AUTH_JWT_ALGORITHM", value = "RS256" },
+        { name = "AUTH_TOKEN_EXPIRY_HOURS", value = "24" }
       ]
       secrets = [
-        { name = "OPENSEARCH_USERNAME", valueFrom = aws_secretsmanager_secret.opensearch_credentials.arn },
-        { name = "OPENSEARCH_PASSWORD", valueFrom = aws_secretsmanager_secret.opensearch_credentials.arn }
+        # Database Credentials (sensitive)
+        { name = "DB_AWS_ACCESS_KEY_ID", valueFrom = "${aws_secretsmanager_secret.database_credentials.arn}:aws_access_key_id::" },
+        { name = "DB_AWS_SECRET_ACCESS_KEY", valueFrom = "${aws_secretsmanager_secret.database_credentials.arn}:aws_secret_access_key::" },
+        
+        # OpenSearch Credentials (sensitive)
+        { name = "OPENSEARCH_USERNAME", valueFrom = "${aws_secretsmanager_secret.opensearch_credentials.arn}:username::" },
+        { name = "OPENSEARCH_PASSWORD", valueFrom = "${aws_secretsmanager_secret.opensearch_credentials.arn}:password::" },
+        
+        # Authentication Settings (sensitive)
+        { name = "AUTH_COGNITO_USER_POOL_ID", valueFrom = "${aws_secretsmanager_secret.auth_settings.arn}:cognito_user_pool_id::" },
+        { name = "AUTH_COGNITO_CLIENT_ID", valueFrom = "${aws_secretsmanager_secret.auth_settings.arn}:cognito_client_id::" },
+        { name = "AUTH_COGNITO_CLIENT_SECRET", valueFrom = "${aws_secretsmanager_secret.auth_settings.arn}:cognito_client_secret::" }
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -280,7 +300,11 @@ resource "aws_iam_policy" "secrets_manager_policy" {
           "secretsmanager:GetSecretValue"
         ]
         Effect   = "Allow"
-        Resource = aws_secretsmanager_secret.opensearch_credentials.arn
+        Resource = [
+          aws_secretsmanager_secret.database_credentials.arn,
+          aws_secretsmanager_secret.opensearch_credentials.arn,
+          aws_secretsmanager_secret.auth_settings.arn
+        ]
       }
     ]
   })
@@ -297,6 +321,26 @@ resource "aws_iam_role_policy_attachment" "ecs_task_dynamodb_policy" {
 }
 
 # Secrets Manager for OpenSearch credentials
+# AWS Secrets Manager - Database Credentials
+resource "aws_secretsmanager_secret" "database_credentials" {
+  name        = "emcrm-database-credentials"
+  description = "Database credentials for EMCRM"
+
+  tags = {
+    Name        = "EMCRM Database Credentials"
+    Environment = var.environment
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "database_credentials" {
+  secret_id = aws_secretsmanager_secret.database_credentials.id
+  secret_string = jsonencode({
+    aws_access_key_id     = var.aws_access_key_id
+    aws_secret_access_key = var.aws_secret_access_key
+  })
+}
+
+# AWS Secrets Manager - OpenSearch Credentials
 resource "aws_secretsmanager_secret" "opensearch_credentials" {
   name        = "emcrm-opensearch-credentials"
   description = "OpenSearch credentials for EMCRM"
@@ -312,6 +356,26 @@ resource "aws_secretsmanager_secret_version" "opensearch_credentials" {
   secret_string = jsonencode({
     username = var.opensearch_username
     password = var.opensearch_password
+  })
+}
+
+# AWS Secrets Manager - Authentication Settings
+resource "aws_secretsmanager_secret" "auth_settings" {
+  name        = "emcrm-auth-settings"
+  description = "Authentication settings for EMCRM"
+
+  tags = {
+    Name        = "EMCRM Auth Settings"
+    Environment = var.environment
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "auth_settings" {
+  secret_id = aws_secretsmanager_secret.auth_settings.id
+  secret_string = jsonencode({
+    cognito_user_pool_id   = var.cognito_user_pool_id
+    cognito_client_id      = var.cognito_client_id
+    cognito_client_secret  = var.cognito_client_secret
   })
 }
 

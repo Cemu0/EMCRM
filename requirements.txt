@@ -11,3 +11,9 @@ uvicorn==0.34.0
 fastapi-pagination==0.13.3
 httpx==0.28.1
 orjson==3.11.0
+PyJWT==2.8.0
+requests>=2.32.0
+cryptography==41.0.7
+Authlib==1.3.0
+itsdangerous==2.1.2
+tqdm==4.67.1

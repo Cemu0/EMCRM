@@ -65,7 +65,7 @@ python -m pytest test/test_crm.py
 python -m pytest test/test_crm.py -k test_duplicate_email_should_fail -s
 
 # Create large user dataset
-python -m pytest stress_test/rand_users.py -s
+python -m pytest test/generate_users_events.py -s
 ```
 
 **Note**: Manual development requires setting up DynamoDB Local and OpenSearch separately.
@@ -97,7 +97,7 @@ TOTAL                            480     90    81%
 day 1: full datamodel + dynamodb + simple test case
 day 2: open search + test large case (~10000 user), fix minor bugs
 day 3: test, add run_in_threadpool, deploy docker
-day 4: connect to AWS, test again...
+day 4: add cognito, connect to AWS, test again...
 
 
 ### Docker Commands

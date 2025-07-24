@@ -60,7 +60,7 @@ start_dev() {
     check_docker
     setup_env
     
-    docker compose -f "$DOCKER_COMPOSE_FILE" up -d
+    docker compose -f "$DOCKER_COMPOSE_FILE" up --build -d 
     
     log_success "Development environment started!"
     log_info "Services available at:"
@@ -119,20 +119,6 @@ run_tests() {
     docker compose -f "$DOCKER_COMPOSE_FILE" exec api python -m pytest test/ -v
 }
 
-# Initialize database (create tables, etc.)
-init_db() {
-    log_info "Initializing database..."
-    docker compose -f "$DOCKER_COMPOSE_FILE" run --rm db-init python -c "
-from app.db.session import get_dynamodb_client
-from app.models import create_tables
-
-print('Creating DynamoDB tables...')
-create_tables()
-print('Database initialization completed!')
-"
-    log_success "Database initialized!"
-}
-
 # Show help
 show_help() {
     echo "EMCRM Development Environment Manager"
@@ -176,9 +162,6 @@ case "${1:-help}" in
         ;;
     test)
         run_tests
-        ;;
-    init-db)
-        init_db
         ;;
     clean)
         clean

@@ -68,10 +68,21 @@ echo -e "\n${GREEN}Getting ECR repository URL...${NC}"
 ECR_REPO=$(terraform output -raw ecr_repository_url)
 AWS_REGION=$(terraform output -raw aws_region 2>/dev/null || echo "us-west-2")
 
-# Build the Docker image
-echo -e "\n${GREEN}Building Docker image...${NC}"
+# Build the Docker image (using Terraform-specific .dockerignore for security)
+echo -e "\n${GREEN}Building Docker image for production deployment...${NC}"
 cd ..
+# Backup original .dockerignore and use Terraform-specific one
+if [ -f "docker/.dockerignore" ]; then
+    cp docker/.dockerignore docker/.dockerignore.backup
+fi
+cp terraform/.dockerignore docker/.dockerignore
 docker build -t emcrm-app:latest -f docker/Dockerfile .
+# Restore original .dockerignore
+if [ -f "docker/.dockerignore.backup" ]; then
+    mv docker/.dockerignore.backup docker/.dockerignore
+else
+    rm docker/.dockerignore
+fi
 
 # Log in to ECR
 echo -e "\n${GREEN}Logging in to ECR...${NC}"

@@ -7,6 +7,10 @@ from app.main import app
 from app.services.db.init import reset_all_table
 from fastapi_pagination import Page, add_pagination, paginate
 from fastapi_pagination.utils import disable_installed_extensions_check
+from app.config import settings
+
+if settings.auth.enabled:
+    Exception("Auth is enabled! Please disable it for testing.")
 
 disable_installed_extensions_check()
 
