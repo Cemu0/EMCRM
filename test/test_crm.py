@@ -2,9 +2,9 @@ import pytest
 from fastapi.testclient import TestClient
 from uuid import uuid4
 from datetime import datetime, timedelta
-from app.opensearch.client import get_opensearch_client
+from app.services.opensearch.client import get_opensearch_client
 from app.main import app
-from app.db.init import reset_all_table
+from app.services.db.init import reset_all_table
 from fastapi_pagination import Page, add_pagination, paginate
 from fastapi_pagination.utils import disable_installed_extensions_check
 

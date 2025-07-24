@@ -1,26 +1,25 @@
 from opensearchpy import OpenSearch
-import os
+from app.config import settings
 
 def get_opensearch_client():
-    mode = os.getenv("OPENSEARCH_MODE", "local") 
-
-    if mode == "cloud":
-        host = os.getenv("OPENSEARCH_HOST")
+    if settings.opensearch.mode == "cloud":
+        if not settings.opensearch.host:
+            raise ValueError("OpenSearch host is required for cloud mode")
+            
         auth = (
-            os.getenv("OPENSEARCH_USERNAME"),
-            os.getenv("OPENSEARCH_PASSWORD")
+            settings.opensearch.username,
+            settings.opensearch.password
         )
         return OpenSearch(
-            hosts=[{"host": host, "port": 443}],
+            hosts=[{"host": settings.opensearch.host, "port": 443}],
             http_auth=auth,
             use_ssl=True,
             verify_certs=True
         )
     else:  # Local
-        # Get OpenSearch endpoint from environment variable or use default
-        opensearch_endpoint = os.getenv("OPENSEARCH_ENDPOINT", "http://localhost:9200")
-        
         # Parse host and port from endpoint
+        opensearch_endpoint = settings.opensearch.endpoint
+        
         # Remove protocol prefix if present
         if opensearch_endpoint.startswith("http://"):
             opensearch_endpoint = opensearch_endpoint[7:]
@@ -37,7 +36,7 @@ def get_opensearch_client():
             
         return OpenSearch(
             hosts=[{"host": host, "port": port}],
-            http_auth=("admin", "aStrongPassw0rd!"),  # Default for local demo
-            use_ssl=False,
-            verify_certs=False
+            http_auth=(settings.opensearch.username, settings.opensearch.password),
+            use_ssl=settings.opensearch.use_ssl,
+            verify_certs=settings.opensearch.verify_certs
         )

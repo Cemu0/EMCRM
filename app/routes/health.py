@@ -4,8 +4,8 @@ from boto3.dynamodb.conditions import Key
 from botocore.exceptions import BotoCoreError, ClientError
 from opensearchpy.exceptions import OpenSearchException
 
-from ..db.session import table
-from ..opensearch.client import get_opensearch_client
+from app.services.db.session import table
+from app.services.opensearch.client import get_opensearch_client
 
 router = APIRouter()
 

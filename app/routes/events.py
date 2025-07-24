@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException
-from ..models import Event, EventAttendance
-from ..db.session import table
+from app.models import Event, EventAttendance
+from app.services.db.session import table
 from boto3.dynamodb.conditions import Key
 from datetime import datetime
-from app.opensearch.client import get_opensearch_client
+from app.services.opensearch.client import get_opensearch_client
 from fastapi.concurrency import run_in_threadpool
 
 router = APIRouter()

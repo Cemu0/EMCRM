@@ -1,0 +1,38 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies including development tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    curl \
+    vim \
+    git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install Python dependencies with development extras
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir \
+        watchfiles \
+        python-multipart \
+        ipython \
+        pytest-asyncio
+
+# Copy application code
+COPY . .
+
+# Create non-root user for development
+RUN useradd -m -u 1000 devuser && \
+    chown -R devuser:devuser /app
+USER devuser
+
+EXPOSE 8080
+
+# Default command with hot reloading enabled
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload", "--log-level", "debug"]

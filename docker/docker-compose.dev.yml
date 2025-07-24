@@ -1,0 +1,103 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile.dev
+    container_name: emcrm-api-dev
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount source code for hot reloading
+      - ../app:/app/app:ro
+      - ../requirements.txt:/app/requirements.txt:ro
+      # Mount .env file if it exists
+      - ../.env:/app/.env:ro
+    # Environment variables are loaded from mounted .env file
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+      opensearch-node1:
+        condition: service_healthy
+    # Enable hot reloading
+    restart: no
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
+
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: dynamodb-local-dev
+    ports:
+      - "8000:8000"
+    command: "-jar DynamoDBLocal.jar -inMemory -sharedDb"
+    restart: no
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null -I -w '%{http_code}' http://localhost:8000 | grep '400'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  opensearch-node1:
+    image: opensearchproject/opensearch:2.14.0
+    container_name: opensearch-node1-dev
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "plugins.security.disabled=true"
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=aStrongPassw0rd!"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9600:9600"  # Performance Analyzer port
+    volumes:
+      - opensearch-data-dev:/usr/share/opensearch/data
+    restart: no
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health?pretty || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # opensearch-dashboards:
+  #   image: opensearchproject/opensearch-dashboards:2.14.0
+  #   container_name: opensearch-dashboards-dev
+  #   ports:
+  #     - "5601:5601"
+  #   environment:
+  #     - OPENSEARCH_HOSTS=http://opensearch-node1:9200
+  #     - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+  #   depends_on:
+  #     opensearch-node1:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+
+  # Database initialization service
+  db-init:
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile.dev
+    container_name: emcrm-db-init
+    volumes:
+      - ../app:/app/app:ro
+      - ../test:/app/test:ro
+      - ../.env:/app/.env:ro
+    # Environment variables are loaded from mounted .env file
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+      opensearch-node1:
+        condition: service_healthy
+    command: ["python", "-c", "print('Database initialization container ready')"]
+    profiles:
+      - tools
+
+volumes:
+  opensearch-data-dev:
+
+networks:
+  default:
+    name: emcrm-dev-network

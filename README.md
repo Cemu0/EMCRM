@@ -1,9 +1,13 @@
-# plan for system:
+# EMCRM - Event Management CRM System
 
-FastAPI + Dynamodb (local with docker for pef test first, then cloud later )
--> full docker 
+A FastAPI-based CRM system for event management with DynamoDB for storage and OpenSearch for fast querying.
 
-added opensearch for fast query and email system
+## Architecture
+
+- **Backend**: FastAPI with Pydantic for data validation and settings management
+- **Database**: Amazon DynamoDB (local with Docker for development, AWS cloud for production)
+- **Search**: OpenSearch for fast querying and filtering
+- **Deployment**: Docker for local development, Terraform for AWS deployment
 
 
 # Data Models ( API documentation for detail)
@@ -15,21 +19,56 @@ Email table for tracking status
 add history for event edit/EventUpdate 
 
 
-# dev
+## Development
 
-## Run Locally
+### Quick Start with Docker (Recommended)
+
+For the best development experience, use the Docker development environment:
+
+```bash
+# Start the complete development environment
+./dev.sh start
+
+# View API documentation
+open http://localhost:8080/docs
+
+# View logs
+./dev.sh logs
+
+# Run tests
+./dev.sh test
+
+# Stop the environment
+./dev.sh stop
+```
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development environment documentation.
+
+### Manual Local Development
+
+If you prefer to run without Docker:
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy environment template
+cp .env.dev .env
+
+# Start the API server
 uvicorn app.main:app --reload
 
-## reset tabl
-python -m app.db.init
-
-## run test
+# Run tests
 python -m pytest test/test_crm.py
 
+# Run specific test
 python -m pytest test/test_crm.py -k test_duplicate_email_should_fail -s
 
-## create large user dataset
+# Create large user dataset
 python -m pytest stress_test/rand_users.py -s
+```
+
+**Note**: Manual development requires setting up DynamoDB Local and OpenSearch separately.
 
 ### Test coverage
 
@@ -58,17 +97,77 @@ TOTAL                            480     90    81%
 day 1: full datamodel + dynamodb + simple test case
 day 2: open search + test large case (~10000 user), fix minor bugs
 day 3: test, add run_in_threadpool, deploy docker
-day 4: connect to AWS
+day 4: connect to AWS, test again...
 
 
-docker build -f docker/Dockerfile . -t emcrm-api && docker run -p 8123:8080 emcrm-api
+### Docker Commands
 
+```bash
+# Build production image
+docker build -f docker/Dockerfile . -t emcrm-api
 
-# run test
+# Run production container
+docker run -p 8080:8080 emcrm-api
 
+# Run tests in production environment
 docker compose -f docker/docker-compose.yml run --rm api python -m pytest test/test_crm.py
 
-
-# run final
-
+# Start production environment
 docker compose -f docker/docker-compose.yml up
+```
+
+
+
+## Configuration
+
+The application uses Pydantic's BaseSettings for configuration management. All configuration settings are centralized in `app/config.py` and can be overridden using environment variables or a `.env` file.
+
+A template environment file is provided at `template.env`. Copy this file to `.env` and customize the values as needed:
+
+```bash
+cp template.env .env
+```
+
+## Deployment
+
+### Local Development
+
+For local development, use the development environment:
+
+```bash
+./dev.sh start
+```
+
+### Local Production Testing
+
+To test the production Docker setup locally:
+
+```bash
+docker compose -f docker/docker-compose.yml up
+```
+
+### AWS Deployment with Terraform
+
+The application can be deployed to AWS using Terraform. See the [Deployment Guide](terraform/DEPLOYMENT.md) for detailed instructions.
+
+```bash
+cd terraform
+terraform init
+terraform apply
+```
+
+This will create the following AWS resources:
+
+- DynamoDB tables for storing CRM and email data
+- ECR repository for the Docker image
+- ECS cluster, task definition, and service for running the application
+- Application Load Balancer for routing traffic
+- OpenSearch domain for search functionality with advanced configuration options:
+  - Cluster configuration with optional dedicated master and warm nodes
+  - VPC deployment option for enhanced security
+  - Auto-Tune for performance optimization
+  - CloudWatch log integration
+  - Optional Cognito authentication for OpenSearch Dashboard
+- IAM roles and policies for secure access
+- CloudWatch log group for logging
+- Secrets Manager for storing sensitive information

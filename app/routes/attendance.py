@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from boto3.dynamodb.conditions import Key
-from ..models import EventAttendance
-from ..db.session import table
-from app.opensearch.client import get_opensearch_client
+from app.models import EventAttendance
+from app.services.db.session import table
+from app.services.opensearch.client import get_opensearch_client
 from fastapi_pagination import Page, add_pagination, paginate
 from fastapi.concurrency import run_in_threadpool
 

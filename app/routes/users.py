@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Body
 from app.models import User
-from app.db.session import table  # reference to boto3 DynamoDB Table
+from app.services.db.session import table  # reference to boto3 DynamoDB Table
 from boto3.dynamodb.conditions import Key
-from app.opensearch.client import get_opensearch_client
+from app.services.opensearch.client import get_opensearch_client
 from fastapi.concurrency import run_in_threadpool
 from fastapi import BackgroundTasks
 

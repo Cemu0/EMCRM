@@ -2,11 +2,11 @@ from fastapi import APIRouter, HTTPException
 from fastapi_pagination import Page, add_pagination, paginate
 from uuid import uuid4
 from datetime import datetime
-from ..models import User
-from ..models import EmailRequest, Email, EmailStatusEnum
-from ..query.filter_users import filter_users_opensearch, UserSearchResponse
-from ..services.email_sender import send_bulk_emails
-from ..db.session import email_table 
+from app.models import User
+from app.models import EmailRequest, Email, EmailStatusEnum
+from app.routes.query_users import filter_users_opensearch, UserSearchResponse
+from app.services.email_sender import send_bulk_emails
+from app.services.db.session import email_table 
 from boto3.dynamodb.conditions import Key
 from typing import List, Annotated
 # from fastapi.responses import ORJSONResponse

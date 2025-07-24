@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Query, HTTPException
-from ..models import UserFilter, User
-from ..db.session import table
+from app.models import UserFilter, User
+from app.services.db.session import table
 from boto3.dynamodb.conditions import Key
 from typing import List, Optional, Annotated
 from decimal import Decimal
 from pydantic import StringConstraints, BaseModel
-from ..opensearch.client import get_opensearch_client
+from app.services.opensearch.client import get_opensearch_client
 # from fastapi.responses import ORJSONResponse
 
 router = APIRouter()
