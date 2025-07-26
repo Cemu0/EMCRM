@@ -165,3 +165,51 @@ To perform basic load testing:
 - Tests are designed to run independently
 - Some tests depend on previous tests (e.g., "Get User" depends on "Create User")
 - Environment variables are automatically managed by the test scripts
+
+## Some curl examples just in case
+### Health check
+```
+curl -X GET "http://localhost:8080/health"
+```
+
+### Create a user
+```
+curl -X POST "http://localhost:8080/users/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "phoneNumber": "+1234567890",
+    "company": "Tech Corp",
+    "jobTitle": "Developer"
+  }'
+```
+
+### Create an event  
+owner can be empty or a valid user id
+```
+curl -X POST "http://localhost:8080/events/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "slug": "tech-conference-2024",
+    "title": "Annual technology conference",
+    "startAt": "2024-06-15T09:00:00Z",
+    "endAt": "2024-06-15T17:00:00Z",
+    "venue": "Convention Center",
+    "owner": "", 
+    "hosts": [],
+    "maxCapacity": 5
+  }'
+```
+
+### Search users
+```
+curl -X POST "http://localhost:8080/search/query_users" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "company": "Tech Corp",
+    "minAttended": 0
+  }'
+'''
+

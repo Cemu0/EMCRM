@@ -65,15 +65,32 @@ def create_event(event: Event):
     if result["Count"] > 0:
         raise HTTPException(status_code=400, detail="Event slug already exists")
     
-    item = event.to_dynamodb_item()
-    table.put_item(Item=item)
+    # ensure owner and hosts are valid users, this is a bit expensive
+    if event.owner:
+        res = table.get_item(Key={"PK": f"user#{event.owner}", "SK": f"user#{event.owner}"})
+        if "Item" not in res:
+            raise HTTPException(status_code=400, detail="Owner user not found")
+    
+    for host_id in event.hosts:
+        res = table.get_item(Key={"PK": f"user#{host_id}", "SK": f"user#{host_id}"})
+        if "Item" not in res:
+            raise HTTPException(status_code=400, detail="Host user not found")
 
     # Update hostedCount for owner and hosts
     owner_id = event.owner
-    increment_hosted_count(owner_id)
+    try:
+        increment_hosted_count(owner_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Failed to update hosted count for owner")
 
     for host_id in event.hosts:
-        increment_hosted_count(host_id)
+        try:
+            increment_hosted_count(host_id)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail="Failed to update hosted count for owner")
+
+    item = event.to_dynamodb_item()
+    table.put_item(Item=item)
 
     return event
 

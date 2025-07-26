@@ -83,8 +83,8 @@ class Event(AppBaseModel):
     endAt: datetime
     venue: Optional[Annotated[str, StringConstraints(max_length=200, strip_whitespace=True)]] = None
     maxCapacity: Optional[Annotated[int, Field(ge=1)]] = None
-    owner: str
-    hosts: List[str] = []
+    owner: Str50
+    hosts: Annotated[List[Str50], Field(max_length=10)] = []
 
     @classmethod
     def validate_dates(cls, model):
