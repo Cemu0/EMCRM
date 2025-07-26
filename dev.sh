@@ -139,14 +139,13 @@ show_help() {
     echo "  logs      Show logs (default: api service)"
     echo "  logs [service]  Show logs for specific service"
     echo "  test      Run tests"
-    echo "  init-db   Initialize database tables"
+    echo "  generate  Generate test data"
     echo "  clean     Clean up containers and volumes"
     echo "  help      Show this help message"
     echo ""
     echo "Examples:"
     echo "  $0 start"
     echo "  $0 logs api"
-    echo "  $0 logs opensearch-node1"
 }
 
 # Main script logic

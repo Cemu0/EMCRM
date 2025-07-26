@@ -28,10 +28,11 @@ This guide will help you set up and run the EMCRM application in a local develop
    - **OpenSearch**: http://localhost:9200
    - **OpenSearch Dashboards**: http://localhost:5601
 
-4. when use authenticate, you need to create a user for cognito, then you can access the application, navigate to the cognito user pool, create a user, and set the password.
+4. **(Optional)**  
+when use authenticate, you need to create a user for cognito, then you can access the application, navigate to the cognito user pool, create a user, and set the password.
 
-then you can login with URL: https://<your-domain>/auth/login otherwhise you will get error on login.
-after success login, you can access the document of the API with URL: https://<your-domain>/docs
+then you can login with URL: https://your-domain/auth/login otherwhise you will get error on login.
+after success login, you can access the document of the API with URL: https://your-domain/docs
 
 ## Development Script Usage
 

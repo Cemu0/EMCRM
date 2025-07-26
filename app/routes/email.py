@@ -27,7 +27,7 @@ async def get_email_requests():
     return paginate(response["Items"])
 
 @router.post("/send_emails", response_model=EmailRequest, response_model_exclude_none=True)
-def send_email_to_filtered_users(request: EmailRequest):
+async def send_email_to_filtered_users(request: EmailRequest):
     # 1. Filter users using OpenSearch
     search_result: UserSearchResponse = filter_users_opensearch(request.filter, size=10000)
 
@@ -41,6 +41,8 @@ def send_email_to_filtered_users(request: EmailRequest):
 
     # 3. Extract emails and send
     email_list = [user.email for user in users if user.email]
+    
+    # dummy sent
     send_bulk_emails(email_list, subject=request.subject, body=request.body)
 
     # 4. Prepare EmailRequest record

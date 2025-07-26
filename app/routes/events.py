@@ -18,7 +18,7 @@ def increment_hosted_count(user_id: str):
     res = table.update_item(
         Key=key,
         UpdateExpression="SET hostedCount = if_not_exists(hostedCount, :zero) + :incr",
-        ExpressionAttributeValues={": incr": 1, ":zero": 0},
+        ExpressionAttributeValues={":incr": 1, ":zero": 0},
         ReturnValues="UPDATED_NEW"
     )
     new_count = res["Attributes"]["hostedCount"]
@@ -41,7 +41,7 @@ def decrement_hosted_count(user_id: str):
     res = table.update_item(
         Key=key,
         UpdateExpression="SET hostedCount = if_not_exists(hostedCount, :zero) - :decr",
-        ExpressionAttributeValues={": decr": 1, ":zero": 0},
+        ExpressionAttributeValues={":decr": 1, ":zero": 0},
         ReturnValues="UPDATED_NEW"
     )
     new_count = res["Attributes"]["hostedCount"]
