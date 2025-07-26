@@ -1,6 +1,7 @@
 # EMCRM Development Environment
 
 This guide will help you set up and run the EMCRM application in a local development environment using Docker.
+I am using MacOS, and this guide assumes you are using MacOS. The .dev.sh script is designed for MacOS and Linux only, for Windows, you need to use WSL2.
 
 ## Prerequisites
 

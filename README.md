@@ -79,9 +79,9 @@ Check [API.md](API.md) for detailed endpoint documentation.
 
 ### Quick Start with Docker (Recommended)
 
-For the best development experience, use the Docker development environment:
-
 See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development environment documentation.
+
+I am using MacOS, and this guide assumes you are using MacOS. The .dev.sh script is designed for MacOS and Linux only, for Windows, you need to use WSL2.
 
 ### Manual Local Development
 
