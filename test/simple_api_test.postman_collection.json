@@ -53,7 +53,8 @@
 							{
 								"key": "",
 								"value": "",
-								"type": "text"
+								"type": "text",
+								"disabled": true
 							}
 						],
 						"body": {
@@ -935,6 +936,11 @@
 							{
 								"key": "Accept",
 								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{auth_token}}",
+								"type": "text"
 							}
 						],
 						"url": {
@@ -1195,6 +1201,11 @@
 							{
 								"key": "Accept",
 								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{auth_token}}",
+								"type": "text"
 							}
 						],
 						"body": {
@@ -1340,6 +1351,11 @@
 							{
 								"key": "Accept",
 								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{auth_token}}",
+								"type": "text"
 							}
 						],
 						"url": {
@@ -1459,6 +1475,11 @@
 							{
 								"key": "Accept",
 								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{auth_token}}",
+								"type": "text"
 							}
 						],
 						"url": {
@@ -1598,11 +1619,6 @@
 							{
 								"key": "Cookie",
 								"value": "{{auth_token}}",
-								"type": "text"
-							},
-							{
-								"key": "",
-								"value": "",
 								"type": "text"
 							}
 						],
@@ -2088,6 +2104,11 @@
 							{
 								"key": "Accept",
 								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{auth_token}}",
+								"type": "text"
 							}
 						],
 						"url": {
@@ -2432,6 +2453,11 @@
 							{
 								"key": "Accept",
 								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{auth_token}}",
+								"type": "text"
 							}
 						],
 						"body": {
@@ -2590,6 +2616,11 @@
 							{
 								"key": "Accept",
 								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{auth_token}}",
+								"type": "text"
 							}
 						],
 						"body": {
@@ -2726,6 +2757,11 @@
 							{
 								"key": "Accept",
 								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{auth_token}}",
+								"type": "text"
 							}
 						],
 						"url": {
@@ -2863,6 +2899,11 @@
 							{
 								"key": "Accept",
 								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{auth_token}}",
+								"type": "text"
 							}
 						],
 						"url": {
@@ -2986,6 +3027,11 @@
 							{
 								"key": "Accept",
 								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{auth_token}}",
+								"type": "text"
 							}
 						],
 						"url": {
@@ -3144,6 +3190,11 @@
 							{
 								"key": "Accept",
 								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{auth_token}}",
+								"type": "text"
 							}
 						],
 						"url": {
@@ -3285,6 +3336,11 @@
 					{
 						"key": "Accept",
 						"value": "application/json"
+					},
+					{
+						"key": "Cookie",
+						"value": "{{auth_token}}",
+						"type": "text"
 					}
 				],
 				"url": {
