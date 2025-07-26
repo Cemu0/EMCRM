@@ -10,14 +10,40 @@ variable "environment" {
   default     = "dev"
 }
 
+# VPC Configuration
+variable "create_vpc" {
+  description = "Whether to create a new VPC or use an existing one"
+  type        = bool
+  default     = true
+}
+
 variable "vpc_id" {
-  description = "The ID of the VPC to deploy to"
+  description = "The ID of the VPC to deploy to (only used when create_vpc is false)"
   type        = string
+  default     = ""
+}
+
+variable "vpc_cidr" {
+  description = "The CIDR block for the VPC"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "public_subnet_cidrs" {
+  description = "List of CIDR blocks for public subnets"
+  type        = list(string)
+  default     = ["10.0.1.0/24", "10.0.2.0/24"]
+  
+  validation {
+    condition     = length(var.public_subnet_cidrs) >= 2
+    error_message = "At least 2 public subnet CIDR blocks must be provided for high availability."
+  }
 }
 
 variable "subnet_ids" {
-  description = "The IDs of the subnets to deploy to"
+  description = "The IDs of the subnets to deploy to (only used when create_vpc is false)"
   type        = list(string)
+  default     = []
 }
 
 variable "dynamodb_main_table_name" {
@@ -76,100 +102,36 @@ variable "opensearch_instance_count" {
   default     = 1
 }
 
-variable "opensearch_dedicated_master_enabled" {
-  description = "Whether to enable dedicated master nodes"
-  type        = bool
-  default     = false
-}
-
-variable "opensearch_dedicated_master_count" {
-  description = "The number of dedicated master nodes"
-  type        = number
-  default     = 3
-}
-
-variable "opensearch_dedicated_master_type" {
-  description = "The instance type of the dedicated master nodes"
-  type        = string
-  default     = "t3.small.search"
-}
-
-variable "opensearch_warm_enabled" {
-  description = "Whether to enable warm nodes"
-  type        = bool
-  default     = false
-}
-
-variable "opensearch_warm_count" {
-  description = "The number of warm nodes"
-  type        = number
-  default     = 2
-}
-
-variable "opensearch_warm_type" {
-  description = "The instance type of the warm nodes"
-  type        = string
-  default     = "ultrawarm1.medium.search"
-}
-
+# Simplified OpenSearch Configuration for MVP
 variable "opensearch_vpc_enabled" {
-  description = "Whether to deploy OpenSearch within a VPC"
+  description = "Whether to deploy OpenSearch within a VPC (false for simpler MVP deployment)"
   type        = bool
   default     = false
-}
-
-variable "opensearch_volume_type" {
-  description = "The EBS volume type for OpenSearch"
-  type        = string
-  default     = "gp3"
-}
-
-variable "opensearch_volume_size" {
-  description = "The size of the EBS volume for OpenSearch in GB"
-  type        = number
-  default     = 10
-}
-
-variable "opensearch_volume_iops" {
-  description = "The IOPS for the EBS volume (only applicable for gp3 or io1 volume types)"
-  type        = number
-  default     = 3000
-}
-
-variable "opensearch_kms_key_id" {
-  description = "The KMS key ID to encrypt the OpenSearch domain with"
-  type        = string
-  default     = null
-}
-
-variable "opensearch_custom_endpoint_enabled" {
-  description = "Whether to enable a custom endpoint for OpenSearch"
-  type        = bool
-  default     = false
-}
-
-variable "opensearch_custom_endpoint" {
-  description = "The custom endpoint for OpenSearch"
-  type        = string
-  default     = ""
-}
-
-variable "opensearch_custom_endpoint_certificate_arn" {
-  description = "The ARN of the ACM certificate for the custom endpoint"
-  type        = string
-  default     = ""
-}
-
-variable "opensearch_auto_tune_enabled" {
-  description = "Whether to enable Auto-Tune for OpenSearch"
-  type        = bool
-  default     = true
 }
 
 variable "opensearch_allowed_cidr_blocks" {
   description = "List of CIDR blocks to allow access to the OpenSearch domain"
   type        = list(string)
   default     = ["0.0.0.0/0"]
+}
+
+variable "existing_vpc_id" {
+  description = "The ID of an existing VPC to use (when not creating a new VPC)"
+  type        = string
+  default     = ""
+}
+
+variable "existing_subnet_ids" {
+  description = "List of existing subnet IDs to use (when not creating a new VPC)"
+  type        = list(string)
+  default     = []
+}
+
+variable "jwt_secret" {
+  description = "JWT secret for authentication"
+  type        = string
+  sensitive   = true
+  default     = "default-jwt-secret-change-in-production"
 }
 
 variable "opensearch_log_publishing_enabled" {
@@ -202,28 +164,6 @@ variable "service_desired_count" {
   default     = 2
 }
 
-# Database Credentials
-variable "aws_access_key_id" {
-  description = "AWS Access Key ID for DynamoDB access"
-  type        = string
-  default     = "dummy"
-  sensitive   = true
-}
-
-variable "aws_secret_access_key" {
-  description = "AWS Secret Access Key for DynamoDB access"
-  type        = string
-  default     = "dummy"
-  sensitive   = true
-}
-
-# Authentication Configuration
-variable "auth_enabled" {
-  description = "Whether to enable authentication"
-  type        = bool
-  default     = true
-}
-
 variable "cognito_user_pool_id" {
   description = "AWS Cognito User Pool ID"
   type        = string
@@ -243,4 +183,52 @@ variable "cognito_client_secret" {
   type        = string
   default     = ""
   sensitive   = true
+}
+
+variable "auth_enabled" {
+  description = "Enable authentication and create Cognito resources"
+  type        = bool
+  default     = false
+}
+
+variable "domain_name" {
+  description = "Custom domain name for the application (optional)"
+  type        = string
+  default     = ""
+}
+
+variable "certificate_arn" {
+  description = "ARN of the SSL certificate for HTTPS"
+  type        = string
+  default     = ""
+}
+
+variable "enable_https" {
+  description = "Enable HTTPS listener"
+  type        = bool
+  default     = true
+}
+
+variable "ssl_policy" {
+  description = "SSL policy for the HTTPS listener"
+  type        = string
+  default     = "ELBSecurityPolicy-TLS-1-2-2017-01"
+}
+
+variable "force_destroy_resources" {
+  description = "Force destroy resources that might have dependencies"
+  type        = bool
+  default     = true
+}
+
+variable "manage_domain_records" {
+  description = "Whether to manage Route53 domain records (set to false to preserve existing CNAME records)"
+  type        = bool
+  default     = true
+}
+
+variable "preserve_ssl_cname" {
+  description = "Whether to preserve SSL validation CNAME records during destroy"
+  type        = bool
+  default     = true
 }

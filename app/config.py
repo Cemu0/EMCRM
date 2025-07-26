@@ -7,8 +7,6 @@ class DatabaseSettings(BaseSettings):
     """Database configuration settings"""
     aws_region: str = Field(default="us-west-2", description="AWS Region")
     dynamodb_endpoint: Optional[str] = Field(default="http://localhost:8000", description="DynamoDB endpoint URL")
-    aws_access_key_id: str = Field(default="dummy", description="AWS Access Key ID")
-    aws_secret_access_key: str = Field(default="dummy", description="AWS Secret Access Key")
     main_table_name: str = Field(default="crm_data", description="Main DynamoDB table name")
     email_table_name: str = Field(default="email_data", description="Email DynamoDB table name")
     max_retries: int = Field(default=2, description="Maximum number of retry attempts")
@@ -51,7 +49,8 @@ class AppSettings(BaseSettings):
     api_port: int = Field(default=8080, description="API port")
     api_host: str = Field(default="0.0.0.0", description="API host")
     log_level: str = Field(default="INFO", description="Logging level")
-    
+    production: bool = Field(default=False, description="Production mode")
+
     model_config = SettingsConfigDict(
         env_prefix="APP_",
         env_file=".env",
@@ -86,6 +85,7 @@ class Settings(BaseSettings):
     opensearch: OpenSearchSettings = Field(default_factory=OpenSearchSettings)
     app: AppSettings = Field(default_factory=AppSettings)
     auth: AuthSettings = Field(default_factory=AuthSettings)
+    
     
     model_config = SettingsConfigDict(
         env_file=".env",

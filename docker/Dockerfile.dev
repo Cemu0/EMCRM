@@ -24,8 +24,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
         ipython \
         pytest-asyncio
 
-# Copy application code
-COPY . .
+# Copy only app and test directories
+COPY app/ ./app/
+COPY test/ ./test/
 
 # Create non-root user for development
 RUN useradd -m -u 1000 devuser && \

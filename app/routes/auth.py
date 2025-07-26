@@ -4,10 +4,12 @@ from pydantic import BaseModel
 from typing import Optional
 import logging
 import json
+import requests
 from datetime import datetime, timedelta
 from itsdangerous import URLSafeTimedSerializer
 from authlib.integrations.requests_client import OAuth2Session
 from app.config import settings
+from app.auth_utils import get_current_user_required
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -55,6 +57,88 @@ def clear_auth_cookie(response: Response):
     """Clear authentication cookie"""
     response.delete_cookie(key="auth_session")
 
+def get_base_url(request: Request) -> str:
+    """Get base URL from request, handling both development and production environments"""
+    # Check if we're in development mode
+    if not getattr(settings.app, 'production', False):
+        return "http://localhost:8080"
+    
+    # For production, use the request's host
+    return f"https://{request.headers.get('host', request.url.netloc)}"
+
+def get_cognito_config() -> dict:
+    """Get Cognito configuration endpoints using OpenID Connect discovery"""
+    try:
+        issuer = f"https://cognito-idp.{settings.auth.cognito_region}.amazonaws.com/{settings.auth.cognito_user_pool_id}"
+        discovery_url = f"{issuer}/.well-known/openid-configuration"
+        response = requests.get(discovery_url)
+        response.raise_for_status()
+        metadata = response.json()
+        
+        return {
+            'authorization_endpoint': metadata.get('authorization_endpoint'),
+            'token_endpoint': metadata.get('token_endpoint'),
+            'userinfo_endpoint': metadata.get('userinfo_endpoint'),
+            'jwks_uri': metadata.get('jwks_uri'),
+            'issuer': metadata.get('issuer')
+        }
+    except Exception as e:
+        logger.error(f"Failed to fetch discovery metadata: {e}")
+        # Fallback to manual construction (this was the problematic part)
+        base_url = f"https://cognito-idp.{settings.auth.cognito_region}.amazonaws.com/{settings.auth.cognito_user_pool_id}"
+        return {
+            'authorization_endpoint': f"{base_url}/oauth2/authorize",
+            'token_endpoint': f"{base_url}/oauth2/token",
+            'userinfo_endpoint': f"{base_url}/oauth2/userInfo",
+            'jwks_uri': f"{base_url}/.well-known/jwks.json",
+            'issuer': base_url
+        }
+
+def create_oauth_client() -> OAuth2Session:
+    """Create OAuth2 client with discovery-based configuration"""
+    client = OAuth2Session(
+        client_id=settings.auth.cognito_client_id,
+        client_secret=getattr(settings.auth, 'cognito_client_secret', None),
+        scope='email openid phone profile'
+    )
+    
+    # Set server metadata from discovery
+    try:
+        config = get_cognito_config()
+        client.server_metadata = config
+    except Exception as e:
+        logger.error(f"Failed to set server metadata: {e}")
+    
+    return client
+
+def create_oauth_client_with_discovery() -> OAuth2Session:
+    """Create OAuth2 client with automatic discovery using requests"""
+    # Construct the issuer URL
+    issuer = f"https://cognito-idp.{settings.auth.cognito_region}.amazonaws.com/{settings.auth.cognito_user_pool_id}"
+    
+    client = OAuth2Session(
+        client_id=settings.auth.cognito_client_id,
+        client_secret=getattr(settings.auth, 'cognito_client_secret', None),
+        scope='email openid phone profile'
+    )
+    
+    # Manually fetch and set server metadata
+    try:
+        discovery_url = f"{issuer}/.well-known/openid_configuration"
+        response = requests.get(discovery_url)
+        response.raise_for_status()
+        metadata = response.json()
+        
+        # Set the metadata manually since load_server_metadata doesn't exist
+        client.server_metadata = metadata
+        
+    except Exception as e:
+        logger.error(f"Failed to fetch discovery metadata: {e}")
+        # Fallback to manual configuration
+        client.server_metadata = get_cognito_config()
+    
+    return client
+
 # Pydantic models
 class TokenResponse(BaseModel):
     access_token: str
@@ -68,55 +152,30 @@ class UserInfo(BaseModel):
     email: Optional[str] = None
     groups: list = []
 
-# OAuth2 client setup
-def create_oauth_client() -> OAuth2Session:
-    """Create OAuth2 client for Cognito"""
-    return OAuth2Session(
-        client_id=settings.auth.cognito_client_id,
-        client_secret=getattr(settings.auth, 'cognito_client_secret', None),
-        scope='email openid phone profile'
-    )
-
-def get_cognito_config():
-    """Get Cognito configuration"""
-    base_url = f"https://{settings.auth.cognito_user_pool_id}.auth.{settings.auth.cognito_region}.amazoncognito.com"
-    return {
-        'authorization_endpoint': f"{base_url}/login",
-        'token_endpoint': f"{base_url}/oauth2/token",
-        'userinfo_endpoint': f"{base_url}/oauth2/userInfo",
-        'metadata_url': f"https://cognito-idp.{settings.auth.cognito_region}.amazonaws.com/{settings.auth.cognito_user_pool_id}/.well-known/openid-configuration"
-    }
-
-# Dependency to get current user from request state
-def get_current_user(request: Request) -> Optional[dict]:
-    """Get current user from request state (set by auth middleware) or cookie"""
-    # First try to get from middleware (JWT validation)
-    user = getattr(request.state, 'user', None)
-    if user:
-        return user
-    
-    # Fallback to cookie-based session for testing
-    auth_data = get_auth_from_cookie(request)
-    if auth_data and auth_data.get('user_info'):
-        return auth_data['user_info']
-    
-    return None
+# Use the correct function name from auth_utils
+get_current_user = get_current_user_required
 
 @router.get("/login")
-async def login(redirect_uri: Optional[str] = None):
-    """Redirect to Cognito for authentication visit http://localhost:8080/auth/login to login"""
-    redirect_uri = redirect_uri or "http://localhost:8080/auth/callback"
+async def login(request: Request, redirect_uri: Optional[str] = None):
+    """Redirect to Cognito for authentication"""
+    base_url = get_base_url(request)
+    redirect_uri = redirect_uri or f"{base_url}/auth/callback"
     
     try:
-        client = create_oauth_client()
+        client = create_oauth_client_with_discovery()
         client.redirect_uri = redirect_uri
         
-        config = get_cognito_config()
-        authorization_url, state = client.create_authorization_url(
-            config['authorization_endpoint']
-        )
+        # Get authorization endpoint from metadata
+        auth_endpoint = client.server_metadata.get('authorization_endpoint')
+        if not auth_endpoint:
+            # Fallback to manual construction
+            config = get_cognito_config()
+            auth_endpoint = config['authorization_endpoint']
         
-        logger.info("Redirecting to Cognito login")
+        authorization_url, state = client.create_authorization_url(auth_endpoint)
+        
+        logger.info(f"Redirecting to Cognito login: {authorization_url}")
+        logger.info(f"Callback URL: {redirect_uri}")
         return RedirectResponse(url=authorization_url, status_code=302)
         
     except Exception as e:
@@ -127,7 +186,7 @@ async def login(redirect_uri: Optional[str] = None):
         )
 
 @router.get("/callback")
-async def auth_callback(response: Response, code: Optional[str] = None, error: Optional[str] = None, state: Optional[str] = None):
+async def auth_callback(request: Request, response: Response, code: Optional[str] = None, error: Optional[str] = None, state: Optional[str] = None):
     """Handle OAuth callback from Cognito"""
     if error:
         raise HTTPException(status_code=400, detail=f"Authentication failed: {error}")
@@ -135,13 +194,18 @@ async def auth_callback(response: Response, code: Optional[str] = None, error: O
         raise HTTPException(status_code=400, detail="Authorization code not provided")
     
     try:
+        base_url = get_base_url(request)
+        callback_url = f"{base_url}/auth/callback"
+        
         client = create_oauth_client()
-        client.redirect_uri = "http://localhost:8080/auth/callback"
+        client.redirect_uri = callback_url
         
         config = get_cognito_config()
+        # Fix: Use code parameter directly instead of authorization_response
         token = client.fetch_token(
             config['token_endpoint'],
-            authorization_response=f"http://localhost:8080/auth/callback?code={code}&state={state or ''}"
+            code=code,
+            redirect_uri=callback_url
         )
         
         # Fetch user info
@@ -161,6 +225,7 @@ async def auth_callback(response: Response, code: Optional[str] = None, error: O
         logger.info("Token exchange successful and saved to cookie")
         return {
             "message": "Authentication successful",
+            "docs_url": f"{base_url}/docs",
             "user_info": user_info,
             "token_saved": True,
             "expires_in": token.get('expires_in', 3600)

@@ -109,3 +109,8 @@ venv.bak/
 .DS_Store
 .vercel
 app/middleware/__init__.py
+.terraform*
+
+terraform/terraform.tfstate
+terraform/secret.tfvars
+terraform/terraform.tfvars

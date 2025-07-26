@@ -119,6 +119,12 @@ run_tests() {
     docker compose -f "$DOCKER_COMPOSE_FILE" exec api python -m pytest test/ -v
 }
 
+# Run generate
+run_generate() {
+    log_info "Running generate in development environment..."
+    docker compose -f "$DOCKER_COMPOSE_FILE" exec api python -m pytest test/generate_users_events.py -s
+}
+
 # Show help
 show_help() {
     echo "EMCRM Development Environment Manager"
@@ -162,6 +168,9 @@ case "${1:-help}" in
         ;;
     test)
         run_tests
+        ;;
+    generate)
+        run_generate
         ;;
     clean)
         clean

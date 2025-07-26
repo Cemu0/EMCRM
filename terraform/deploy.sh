@@ -51,6 +51,28 @@ terraform init
 echo -e "\n${GREEN}Planning Terraform deployment...${NC}"
 terraform plan -out=tfplan
 
+# Clean up any existing secrets that might be scheduled for deletion
+echo -e "\n${GREEN}Cleaning up existing secrets...${NC}"
+AWS_REGION=$(grep '^aws_region' terraform.tfvars | cut -d'=' -f2 | tr -d '" ' 2>/dev/null || echo "us-west-2")
+
+# Delete the OpenSearch credentials secret
+echo "Deleting existing OpenSearch credentials secret..."
+aws secretsmanager delete-secret \
+  --secret-id emcrm-opensearch-credentials-dev \
+  --force-delete-without-recovery \
+  --region "$AWS_REGION" 2>/dev/null || echo "Secret not found or already deleted"
+
+# Delete the auth settings secret
+echo "Deleting existing auth settings secret..."
+aws secretsmanager delete-secret \
+  --secret-id emcrm-auth-settings-dev \
+  --force-delete-without-recovery \
+  --region "$AWS_REGION" 2>/dev/null || echo "Secret not found or already deleted"
+
+# Wait a moment for deletion to propagate
+echo "Waiting for deletion to propagate..."
+sleep 5
+
 # Ask for confirmation
 echo -e "\n${YELLOW}Do you want to apply the Terraform plan? (y/n)${NC}"
 read -r answer
@@ -66,23 +88,14 @@ terraform apply tfplan
 # Get the ECR repository URL
 echo -e "\n${GREEN}Getting ECR repository URL...${NC}"
 ECR_REPO=$(terraform output -raw ecr_repository_url)
-AWS_REGION=$(terraform output -raw aws_region 2>/dev/null || echo "us-west-2")
+# Get AWS region from terraform variables or use default
+AWS_REGION=$(grep '^aws_region' terraform.tfvars | cut -d'=' -f2 | tr -d '" ' 2>/dev/null || echo "us-west-2")
 
 # Build the Docker image (using Terraform-specific .dockerignore for security)
 echo -e "\n${GREEN}Building Docker image for production deployment...${NC}"
 cd ..
-# Backup original .dockerignore and use Terraform-specific one
-if [ -f "docker/.dockerignore" ]; then
-    cp docker/.dockerignore docker/.dockerignore.backup
-fi
-cp terraform/.dockerignore docker/.dockerignore
-docker build -t emcrm-app:latest -f docker/Dockerfile .
-# Restore original .dockerignore
-if [ -f "docker/.dockerignore.backup" ]; then
-    mv docker/.dockerignore.backup docker/.dockerignore
-else
-    rm docker/.dockerignore
-fi
+# Add --platform flag to build for AMD64 architecture
+docker build --platform linux/amd64 -t emcrm-app:latest -f docker/Dockerfile .
 
 # Log in to ECR
 echo -e "\n${GREEN}Logging in to ECR...${NC}"
@@ -90,8 +103,8 @@ aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS 
 
 # Tag and push the image
 echo -e "\n${GREEN}Tagging and pushing Docker image to ECR...${NC}"
-docker tag emcrm-app:latest "$ECR_REPO:latest"
-docker push "$ECR_REPO:latest"
+docker tag emcrm-app:latest "${ECR_REPO}:latest"
+docker push "${ECR_REPO}:latest"
 
 # Force a new deployment of the ECS service
 echo -e "\n${GREEN}Forcing a new deployment of the ECS service...${NC}"
@@ -102,6 +115,24 @@ echo -e "\n${GREEN}Getting load balancer DNS name...${NC}"
 cd terraform
 LB_DNS=$(terraform output -raw load_balancer_dns)
 
+# Get the domain name from terraform variables or fallback to load balancer DNS
+echo -e "\n${GREEN}Getting application domain...${NC}"
+DOMAIN_NAME=$(grep '^domain_name' terraform.tfvars | cut -d'=' -f2 | tr -d '" ' 2>/dev/null || echo "")
+
+if [ -n "$DOMAIN_NAME" ]; then
+    APP_URL="https://$DOMAIN_NAME"
+else
+    # Fallback to load balancer DNS if no domain is configured
+    LB_DNS=$(terraform output -raw load_balancer_dns)
+    APP_URL="https://$LB_DNS"
+fi
+
 echo -e "\n${GREEN}Deployment complete!${NC}"
-echo -e "You can access the application at: http://$LB_DNS"
+echo -e "You can access the application at: $APP_URL"
+echo -e "HTTP requests will be automatically redirected to HTTPS"
 echo -e "It may take a few minutes for the application to become available."
+
+if [ -n "$DOMAIN_NAME" ]; then
+    echo -e "\n${YELLOW}Note: Make sure your domain ($DOMAIN_NAME) is pointing to the load balancer.${NC}"
+    echo -e "Load balancer DNS: $(terraform output -raw load_balancer_dns 2>/dev/null || echo 'Not available')"
+fi

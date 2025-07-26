@@ -1,16 +1,34 @@
-from .session import dynamodb, MAIN_TABLE_NAME, EMAIL_TABLE_NAME
-import time
-import os
+from .session import MAIN_TABLE_NAME, EMAIL_TABLE_NAME
+import boto3
 from botocore.exceptions import ClientError
 from botocore.config import Config
-
-# Timeout settings
-CONNECTION_TIMEOUT = int(os.getenv('DB_CONNECTION_TIMEOUT', '5'))
-
+from app.config import settings
 
 def create_tables():
+    # Skip table creation in production environments
+    # Tables should be managed by Terraform in production
+    if settings.app.production:
+        print("Production environment detected. Skipping table creation - tables should be managed by Terraform.")
+        return
+    
+    print(f"Development environment detected. Creating tables for local development...")
+    
+    # Create DynamoDB client for table creation (development only)
+    dynamodb_client = boto3.client(
+        'dynamodb',
+        region_name=settings.database.aws_region,
+        endpoint_url=settings.database.dynamodb_endpoint,
+        aws_access_key_id="dummy",
+        aws_secret_access_key="dummy",
+        config=Config(
+            retries={'max_attempts': settings.database.max_retries, 'mode': 'standard'},
+            connect_timeout=settings.database.connect_timeout,
+            read_timeout=settings.database.read_timeout
+        )
+    )
+    
     try:
-        dynamodb.create_table(
+        dynamodb_client.create_table(
             TableName=MAIN_TABLE_NAME,
             KeySchema=[
                 {'AttributeName': 'PK', 'KeyType': 'HASH'},
@@ -86,7 +104,7 @@ def create_tables():
         print(f"{MAIN_TABLE_NAME} creation skipped or failed: {e}")
 
     try:
-        dynamodb.create_table(
+        dynamodb_client.create_table(
             TableName=EMAIL_TABLE_NAME,
             KeySchema=[
                 {'AttributeName': 'PK', 'KeyType': 'HASH'},
@@ -128,26 +146,22 @@ def create_tables():
         print(f"{EMAIL_TABLE_NAME} creation skipped or failed: {e}")
 
 def delete_table(table_name):
-    import boto3
-    from botocore.config import Config
-
-    # Get configuration from environment variables
-    region = os.getenv('AWS_REGION', 'us-west-2')
-    endpoint_url = os.getenv('DYNAMODB_ENDPOINT', 'http://localhost:8000')
-    access_key = os.getenv('AWS_ACCESS_KEY_ID', 'dummy')
-    secret_key = os.getenv('AWS_SECRET_ACCESS_KEY', 'dummy')
+    # Only allow table deletion in development environments
+    if settings.app.production:
+        print("Production environment detected. Table deletion not allowed - tables are managed by Terraform.")
+        return
     
-    # Create client with timeout settings
+    # Create client with environment-based configuration (development only)
     dynamodb = boto3.client("dynamodb", 
-        region_name=region,
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
+        region_name=settings.database.aws_region,
+        aws_access_key_id="dummy",
+        aws_secret_access_key="dummy",
         config=Config(
             retries={'max_attempts': 3, 'mode': 'standard'},
-            connect_timeout=CONNECTION_TIMEOUT,
-            read_timeout=CONNECTION_TIMEOUT
+            connect_timeout=settings.database.connect_timeout,
+            read_timeout=settings.database.read_timeout
         ), 
-        endpoint_url=endpoint_url)  # adjust if using AWS
+        endpoint_url=settings.database.dynamodb_endpoint)
     
     try:
         dynamodb.delete_table(TableName=table_name)

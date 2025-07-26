@@ -4,65 +4,53 @@ aws_region = "us-west-2"
 # Environment
 environment = "dev"
 
-# VPC and Subnet IDs
-# Replace with your actual VPC and subnet IDs
-vpc_id = "vpc-0123456789abcdef0"
-subnet_ids = ["subnet-0123456789abcdef0", "subnet-0123456789abcdef1"]
+# VPC Configuration
+# Set create_vpc to true to automatically create a new VPC with public subnets for API access
+# This creates a VPC with Internet Gateway and public subnets across multiple AZs
+# The load balancer and ECS tasks will be deployed in public subnets for direct internet access
+# Set create_vpc to false to use existing VPC and subnets
+create_vpc = true
+
+# VPC CIDR block (only used when create_vpc = true)
+vpc_cidr = "10.0.0.0/16"
+
+# Public subnet CIDR blocks (only used when create_vpc = true)
+public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+
+# Existing VPC and Subnet IDs (only used when create_vpc = false)
+# Replace with your actual VPC and subnet IDs if using existing infrastructure
+vpc_id = ""
+subnet_ids = []
 
 # DynamoDB Table Names
 dynamodb_main_table_name = "crm_data"
 dynamodb_email_table_name = "email_data"
 
-# OpenSearch Configuration
-# Basic Configuration
+# Simplified OpenSearch Configuration for MVP
 opensearch_domain_name = "emcrm"
 opensearch_engine_version = "OpenSearch_2.11"
-
-# Use this if connecting to an existing OpenSearch domain, otherwise leave empty
-opensearch_host = ""
-
-# Authentication
 opensearch_username = "admin"
 opensearch_password = "YourStrongPassword123!"
-
-# Cluster Configuration
 opensearch_instance_type = "t3.small.search"
 opensearch_instance_count = 1
 
-# VPC Configuration (set to true to deploy in VPC)
+# VPC Configuration (false for simpler deployment)
 opensearch_vpc_enabled = false
-
-# Dedicated Master Nodes (set enabled to true to use dedicated master nodes)
-opensearch_dedicated_master_enabled = false
-opensearch_dedicated_master_count = 3
-opensearch_dedicated_master_type = "t3.small.search"
-
-# Warm Nodes (set enabled to true to use warm nodes for cost optimization)
-opensearch_warm_enabled = false
-opensearch_warm_count = 2
-opensearch_warm_type = "ultrawarm1.medium.search"
-
-# Storage Configuration
-opensearch_volume_type = "gp3"
-opensearch_volume_size = 10
-opensearch_volume_iops = 3000
-
-# Custom Endpoint Configuration (set enabled to true to use custom endpoint)
-opensearch_custom_endpoint_enabled = false
-opensearch_custom_endpoint = "search.example.com"
-opensearch_custom_endpoint_certificate_arn = "arn:aws:acm:region:account:certificate/certificate-id"
-
-# Auto-Tune and Logging
-opensearch_auto_tune_enabled = true
-opensearch_log_publishing_enabled = true
-
-# Security Configuration
-opensearch_allowed_cidr_blocks = ["0.0.0.0/0"]
-
-# Cognito Authentication for OpenSearch Dashboards
-opensearch_cognito_enabled = false
 
 # Container Configuration
 container_cpu = "256"
 container_memory = "512"
-service_desired_count = 2
+service_desired_count = 1
+
+# Authentication Configuration
+# Set to true to create Cognito User Pool via Terraform
+# Set to false to use existing Cognito resources (provide IDs in secret.tfvars)
+auth_enabled = true
+
+# Custom domain name for the application for https
+# If not provided, will use the load balancer DNS name or create a new certificate in the region
+certificate_arn = "arn:aws:acm:us-west-2:your-account:certificate/your-cert-id"
+enable_https = true
+domain_name = ""
+manage_domain_records = true   # Set to false before destroy to preserve domain mapping
+preserve_ssl_cname = true      # Always preserve SSL validation records

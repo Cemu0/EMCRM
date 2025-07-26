@@ -5,18 +5,19 @@ A FastAPI-based CRM system for event management with DynamoDB for storage and Op
 ## Architecture
 
 - **Backend**: FastAPI with Pydantic for data validation and settings management
+- **Authentication**: Cognito for user authentication and authorization (can be enable or disable in local)
 - **Database**: Amazon DynamoDB (local with Docker for development, AWS cloud for production)
-- **Search**: OpenSearch for fast querying and filtering
+- **Search**: OpenSearch for fast querying and filtering (local with Docker for development, AWS cloud for production)
 - **Deployment**: Docker for local development, Terraform for AWS deployment
 
 
-# Data Models ( API documentation for detail)
+# Data Models ( API documentation (auto generated) for detail)
 models.py -> keep simple for demo purpose
 there is additional EventAttendance table for attentdance in main table (Single table mode)
 Email table for tracking status
 
 # places for improvement based on product requirement:
-add history for event edit/EventUpdate 
+- add history for event edit/EventUpdate 
 
 
 ## Development
@@ -24,23 +25,6 @@ add history for event edit/EventUpdate
 ### Quick Start with Docker (Recommended)
 
 For the best development experience, use the Docker development environment:
-
-```bash
-# Start the complete development environment
-./dev.sh start
-
-# View API documentation
-open http://localhost:8080/docs
-
-# View logs
-./dev.sh logs
-
-# Run tests
-./dev.sh test
-
-# Stop the environment
-./dev.sh stop
-```
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development environment documentation.
 
@@ -66,31 +50,12 @@ python -m pytest test/test_crm.py -k test_duplicate_email_should_fail -s
 
 # Create large user dataset
 python -m pytest test/generate_users_events.py -s
+
+# Run tests with coverage
+python -m pytest test/test_crm.py --cov=app --cov-report=term-missing
 ```
 
 **Note**: Manual development requires setting up DynamoDB Local and OpenSearch separately.
-
-### Test coverage
-
-python -m pytest test/test_crm.py --cov=app --cov-report=term-missing
-    
-===================================================================================================== tests coverage 
-Name                           Stmts   Miss  Cover   Missing
-------------------------------------------------------------
-app/__init__.py                    0      0   100%
-app/db/init.py                    34      9    74%   74-75, 108-109, 128-132, 140
-app/db/session.py                 13      4    69%   19-20, 24-25
-app/main.py                       17      4    76%   12-16
-app/models.py                    110     11    90%   83-85, 134-137, 142-145
-app/opensearch/client.py           9      3    67%   8-13
-app/query/filter_users.py         92     26    72%   29, 35-36, 43, 49, 59, 67, 74-86, 104, 122, 124, 126, 133, 141, 161-162
-app/routes/attendance.py          30      7    77%   35-40, 53-59
-app/routes/email.py               56     21    62%   20, 54-59, 65-81, 85-101
-app/routes/events.py              58      1    98%   94
-app/routes/users.py               59      4    93%   16, 77, 108-109
-app/services/email_sender.py       2      0   100%
-------------------------------------------------------------
-TOTAL                            480     90    81%
 
 
 # LOGS
@@ -98,63 +63,13 @@ day 1: full datamodel + dynamodb + simple test case
 day 2: open search + test large case (~10000 user), fix minor bugs
 day 3: test, add run_in_threadpool, deploy docker
 day 4: add cognito, connect to AWS, test again...
+day 5: deploy terraform, test
+day 6: add custom domain name and ssl certificate, finalize documentation
 
-
-### Docker Commands
-
-```bash
-# Build production image
-docker build -f docker/Dockerfile . -t emcrm-api
-
-# Run production container
-docker run -p 8080:8080 emcrm-api
-
-# Run tests in production environment
-docker compose -f docker/docker-compose.yml run --rm api python -m pytest test/test_crm.py
-
-# Start production environment
-docker compose -f docker/docker-compose.yml up
-```
-
-
-
-## Configuration
-
-The application uses Pydantic's BaseSettings for configuration management. All configuration settings are centralized in `app/config.py` and can be overridden using environment variables or a `.env` file.
-
-A template environment file is provided at `template.env`. Copy this file to `.env` and customize the values as needed:
-
-```bash
-cp template.env .env
-```
-
-## Deployment
-
-### Local Development
-
-For local development, use the development environment:
-
-```bash
-./dev.sh start
-```
-
-### Local Production Testing
-
-To test the production Docker setup locally:
-
-```bash
-docker compose -f docker/docker-compose.yml up
-```
 
 ### AWS Deployment with Terraform
 
 The application can be deployed to AWS using Terraform. See the [Deployment Guide](terraform/DEPLOYMENT.md) for detailed instructions.
-
-```bash
-cd terraform
-terraform init
-terraform apply
-```
 
 This will create the following AWS resources:
 
@@ -171,3 +86,4 @@ This will create the following AWS resources:
 - IAM roles and policies for secure access
 - CloudWatch log group for logging
 - Secrets Manager for storing sensitive information
+- Route 53 record for custom domain name (if required)

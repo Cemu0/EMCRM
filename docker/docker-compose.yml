@@ -9,8 +9,6 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - AWS_ACCESS_KEY_ID=dummy
-      - AWS_SECRET_ACCESS_KEY=dummy
       - AWS_REGION=us-east-1
       - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
       - OPENSEARCH_ENDPOINT=http://opensearch-node1:9200

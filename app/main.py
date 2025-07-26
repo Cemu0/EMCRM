@@ -10,9 +10,9 @@ from fastapi_pagination.utils import disable_installed_extensions_check
 from app.config import settings
 
 # Conditional imports for authentication
-if settings.auth.enabled:
-    from app.middleware.auth import AuthMiddleware
-    from app.routes import auth
+# if settings.auth.enabled:
+from app.middleware.auth import AuthMiddleware
+from app.routes import auth
 
 # Configure logging
 logging.basicConfig(
@@ -31,7 +31,8 @@ async def lifespan(app: FastAPI):
         logger.info("Authentication enabled")
     else:
         logger.info("Authentication disabled - development mode")
-    create_tables()
+    if not settings.app.production:
+        create_tables()
     yield
     # Shutdown logic
     logger.info("Shutting down...")
